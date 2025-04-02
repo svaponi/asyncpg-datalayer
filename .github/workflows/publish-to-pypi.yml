@@ -1,9 +1,7 @@
 name: Release
 run-name: Publish to PyPi 🚀
 on:
-  push:
-    tags:
-      - '*'
+  workflow_dispatch:
 jobs:
   Publish-to-PyPi:
     runs-on: ubuntu-latest

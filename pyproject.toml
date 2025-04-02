@@ -2,6 +2,7 @@
 name = "asyncpg-datalayer"
 version = "0.0.0"
 description = "Datalayer implementation for Postgres using asyncpg"
+repository = "https://github.com/svaponi/asyncpg-datalayer"
 authors = [
     { name = "svaponi", email = "10941963+svaponi@users.noreply.github.com" }
 ]

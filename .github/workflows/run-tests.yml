@@ -1,0 +1,28 @@
+name: Test
+run-name: Run Tests 🧪
+on:
+  push:
+    paths:
+      - 'src/asyncpg_datalayer/**'
+jobs:
+  Run-Tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [ "3.12", "3.13" ]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install poetry
+        run: pipx install poetry
+      - name: Set up python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'poetry'
+      - name: Install dependencies
+        run: |
+          poetry install
+      - name: Run tests
+        run: |
+          poetry run pytest

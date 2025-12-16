@@ -45,8 +45,8 @@ async def test_db_perf(db, num_of_rows, readonly):
 
 async def run_perf_test(db, num_of_rows, readonly, read_loops):
     mark0 = time.perf_counter()
-    coros = [insert(db) for _ in range(num_of_rows)]
-    foobar_ids = await asyncio.gather(*coros)
+    coroutines = [insert(db) for _ in range(num_of_rows)]
+    foobar_ids = await asyncio.gather(*coroutines)
     mark1 = time.perf_counter()
     print(f"Inserted {num_of_rows} rows in {mark1 - mark0:0.4f} seconds")
 
@@ -64,10 +64,10 @@ async def run_perf_test(db, num_of_rows, readonly, read_loops):
 
 async def run_read_test(db, foobar_ids, readonly=None):
     mark0 = time.perf_counter()
-    coros = [
+    coroutines = [
         get_or_none_by_id(db, foobar_id, readonly=readonly) for foobar_id in foobar_ids
     ]
-    foobars = await asyncio.gather(*coros)
+    foobars = await asyncio.gather(*coroutines)
     mark1 = time.perf_counter()
     assert {foobar.foobar_id for foobar in foobars} == set(foobar_ids)
     return mark1 - mark0
@@ -87,14 +87,9 @@ async def get_or_none_by_id(
 
 async def insert(
     db: DB,
-    insert_obj: dict | None = None,
     reuse_session: sqlalchemy.ext.asyncio.AsyncSession = None,
 ) -> uuid.UUID:
-    insert_obj = insert_obj or {}
-    if "foobar_id" not in insert_obj:
-        insert_obj["foobar_id"] = uuid.uuid4()
-    if "created_at" not in insert_obj:
-        insert_obj["created_at"] = datetime.datetime.now()
+    insert_obj = {"foobar_id": uuid.uuid4(), "created_at": datetime.datetime.now()}
     query = sqlalchemy.insert(Foobar).values(**insert_obj).returning(Foobar.foobar_id)
     async with db.get_session(reuse_session) as session:
         response = await session.execute(query)

@@ -1,5 +1,8 @@
 import uuid
 
+{% if has_fastapi %}
+import fastapi
+{% endif %}
 import pydantic
 import sqlalchemy
 import sqlalchemy.orm
@@ -35,6 +38,14 @@ class {{ entity_name }}RecordUpdate(pydantic.BaseModel):
     {% endfor %}
 
 
+{% if has_fastapi %}
+def get_db(request: fastapi.Request) -> DB:
+    if not hasattr(request.app.state, "db"):
+        raise RuntimeError("DB not initialized in app state")
+    return request.app.state.db
+{% endif %}
+
+
 class {{ entity_name }}Repository(BaseRepository[{{ entity_name }}Record]):
-    def __init__(self, db: DB) -> None:
+    def __init__(self, db: DB{% if has_fastapi %} = fastapi.Depends(get_db){% endif %}) -> None:
         super().__init__(db, {{ entity_name }}Record)

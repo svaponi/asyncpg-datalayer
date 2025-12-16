@@ -1,4 +1,4 @@
-# sparta-hello
+# asyncpg-datalayer
 
 Sparta hello library.
 

@@ -1,0 +1,102 @@
+import argparse
+import asyncio
+import os
+import sys
+
+import dotenv
+
+from asyncpg_datalayer.codegen.main import generate_code
+from asyncpg_datalayer.migrationtool.main import apply_migrations
+
+
+def _migrations(postgres_url: str, migrations_dir: str) -> None:
+    if not postgres_url:
+        raise RuntimeError(
+            "Postgres URL must be provided via --postgres-url or POSTGRES_URL env var"
+        )
+
+    if not migrations_dir:
+        raise RuntimeError(
+            "Source directory for migrationtool (.sql scripts) must be provided via --migrationtool-dir or MIGRATIONS_DIR env var"
+        )
+
+    if not os.path.isdir(migrations_dir):
+        raise RuntimeError(f"Migrations directory not found: {migrations_dir}")
+
+    asyncio.run(apply_migrations(postgres_url, migrations_dir))
+
+
+def _codegen(postgres_url: str, codegen_dir: str) -> None:
+    if not postgres_url:
+        raise RuntimeError(
+            "Postgres URL must be provided via --postgres-url or POSTGRES_URL env var"
+        )
+    if not codegen_dir:
+        raise RuntimeError(
+            "Destination directory for code generation must be provided via --codegen-dir or CODEGEN_DIR env var"
+        )
+
+    # if not os.path.isdir(codegen_dir):
+    #     raise RuntimeError(f"Code generation directory not found: {codegen_dir}")
+
+    asyncio.run(generate_code(postgres_url, codegen_dir))
+
+
+def main():
+    dotenv.load_dotenv()
+
+    parser = argparse.ArgumentParser(description="Generate code for the data layer")
+    subparsers = parser.add_subparsers(dest="action", required=True)
+
+    migrations_parser = subparsers.add_parser("migrate", help="Apply migrations")
+    migrations_parser.add_argument(
+        "--postgres-url",
+        default=os.environ.get("POSTGRES_URL"),
+        help="Postgres connection URL (or set POSTGRES_URL env variable)",
+    )
+    migrations_parser.add_argument(
+        "--migrations-dir",
+        default=os.environ.get("MIGRATIONS_DIR"),
+        help="Migrations directory (or set MIGRATIONS_DIR env variable)",
+    )
+
+    codegen_parser = subparsers.add_parser("codegen", help="Generate code from DB")
+    codegen_parser.add_argument(
+        "--postgres-url",
+        default=os.environ.get("POSTGRES_URL"),
+        help="Postgres connection URL (or set POSTGRES_URL env variable)",
+    )
+    codegen_parser.add_argument(
+        "--codegen-dir",
+        default=os.environ.get("CODEGEN_DIR"),
+        help="Directory to output generated code (or set CODEGEN_DIR env variable)",
+    )
+
+    args = parser.parse_args()
+
+    try:
+
+        if args.action == "migrate":
+            postgres_url = args.postgres_url
+            migrations_dir = args.migrations_dir
+            _migrations(postgres_url, migrations_dir)
+
+        elif args.action == "codegen":
+            postgres_url = args.postgres_url
+            codegen_dir = args.codegen_dir
+            _codegen(postgres_url, codegen_dir)
+
+        else:
+            raise RuntimeError(f"Unknown action: {args.action}")
+
+    except RuntimeError as e:
+        RED = "\033[91m"
+        RESET = "\033[0m"
+        print(f"{RED}{e}{RESET}", file=sys.stderr)
+        print(file=sys.stderr)
+        parser.print_help()
+        exit(1)
+
+
+if __name__ == "__main__":
+    main()

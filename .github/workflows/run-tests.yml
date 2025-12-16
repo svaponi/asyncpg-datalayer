@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - 'src/asyncpg_datalayer/**'
+      - 'src/tests/**'
 jobs:
   Run-Tests:
     runs-on: ubuntu-latest

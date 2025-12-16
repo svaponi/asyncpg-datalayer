@@ -20,7 +20,7 @@ jobs:
         with:
           python-version: '3.x'
       - name: Install dependencies
-        run: poetry install
+        run: poetry install --only main
       - name: Build package
         run: poetry build
       - name: Publish package

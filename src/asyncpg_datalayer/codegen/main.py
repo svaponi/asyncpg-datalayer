@@ -5,7 +5,6 @@ import os
 import shutil
 
 import asyncpg
-from jinja2 import Environment, FileSystemLoader
 
 from asyncpg_datalayer.base_repository import AUDIT_FIELDS
 from asyncpg_datalayer.codegen.metadata import TableMetadata, load_metadata
@@ -77,6 +76,8 @@ class _Codegen:
 
     def _jinja2(self):
         if not self._env:
+            from jinja2 import Environment, FileSystemLoader
+
             # Create a Jinja2 environment and load templates from the current directory
             templates_dir = os.path.join(os.path.dirname(__file__), "templates")
             self._env = Environment(loader=FileSystemLoader(templates_dir))

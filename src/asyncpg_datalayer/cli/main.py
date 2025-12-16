@@ -5,7 +5,6 @@ import sys
 
 import dotenv
 
-from asyncpg_datalayer.codegen.main import generate_code
 from asyncpg_datalayer.migrationtool.main import apply_migrations
 
 
@@ -36,10 +35,14 @@ def _codegen(postgres_url: str, codegen_dir: str) -> None:
             "Destination directory for code generation must be provided via --codegen-dir or CODEGEN_DIR env var"
         )
 
-    # if not os.path.isdir(codegen_dir):
-    #     raise RuntimeError(f"Code generation directory not found: {codegen_dir}")
+    try:
+        from asyncpg_datalayer.codegen.main import generate_code
 
-    asyncio.run(generate_code(postgres_url, codegen_dir))
+        asyncio.run(generate_code(postgres_url, codegen_dir))
+    except ImportError:
+        raise RuntimeError(
+            "Some dependencies are missing, please make sure 'asyncpg-datalayer[codegen]' is installed"
+        )
 
 
 def main():

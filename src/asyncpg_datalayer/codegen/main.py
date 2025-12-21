@@ -2,6 +2,7 @@
 # Such classes are meant to be used as generic types (Record, RecordUpdate and RecordInsert) for BaseRepository.
 
 import os
+import pathlib
 import shutil
 
 import asyncpg
@@ -209,16 +210,11 @@ class _Codegen:
     async def generate(self):
         files = []
 
-        if os.path.exists(self.codegen_dir):
-            # remove target dirs
-            shutil.rmtree(self.codegen_dir, ignore_errors=True)
-        else:
+        shutil.rmtree(self.codegen_dir, ignore_errors=True)
+        if not os.path.exists(self.codegen_dir):
             os.makedirs(self.codegen_dir)
-
         _init = os.path.join(self.codegen_dir, "__init__.py")
-        if not os.path.exists(_init):
-            with open(_init, "w") as f:
-                f.write("")
+        pathlib.Path(_init).touch(exist_ok=True)
 
         connection = await asyncpg.connect(self.postgres_url)
         try:

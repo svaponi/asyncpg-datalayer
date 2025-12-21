@@ -29,8 +29,11 @@ def test_cli_supports_with_env_vars(monkeypatch, postgres_url, migrations_dir):
         main()
 
 
-def test_cli_supports_with_dotenv(monkeypatch, postgres_url):
-    with mock_environ(DOTENV=".env.test"):
+def test_cli_supports_with_dotenv(monkeypatch, postgres_url, migrations_dir):
+    with open(".env.local", "w") as env_file:
+        env_file.write(f"POSTGRES_URL={postgres_url}\n")
+        env_file.write(f"MIGRATIONS_DIR={migrations_dir}\n")
+    with mock_environ(DOTENV=".env.local"):
         monkeypatch.setattr(sys, "argv", ["prog", "migrate"])
         main()
 

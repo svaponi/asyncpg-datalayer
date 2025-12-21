@@ -5,6 +5,7 @@ on:
     paths:
       - 'src/asyncpg_datalayer/**'
       - 'src/tests/**'
+      - '.github/workflows/run-tests.yml'
 jobs:
   Run-Tests:
     runs-on: ubuntu-latest
@@ -23,7 +24,7 @@ jobs:
           cache: 'poetry'
       - name: Install dependencies
         run: |
-          poetry install
+          poetry install --with codegen,fastapi
       - name: Run tests
         run: |
           poetry run pytest

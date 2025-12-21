@@ -3,7 +3,14 @@ set -euo pipefail
 
 # Valid steps are: major, minor, patch, premajor, preminor, prepatch, prerelease
 # See https://python-poetry.org/docs/cli/#version
-step=${1:-patch}
+select step in major minor patch prerelease; do
+  break
+done
+
+if [ -z "$step" ]; then
+  echo "No valid step selected. Exiting."
+  exit 1
+fi
 
 old_version=$(poetry version -s)
 

@@ -39,7 +39,8 @@ def _codegen(postgres_url: str, codegen_dir: str) -> None:
         from asyncpg_datalayer.codegen.main import generate_code
 
         asyncio.run(generate_code(postgres_url, codegen_dir))
-    except ImportError:
+    except ImportError as e:
+        print(e, file=sys.stderr)
         raise RuntimeError(
             "Some dependencies are missing, please make sure 'asyncpg-datalayer[codegen]' is installed"
         )

@@ -47,7 +47,8 @@ def _codegen(postgres_url: str, codegen_dir: str) -> None:
 
 
 def main():
-    dotenv.load_dotenv()
+    dotenv_path = os.environ.get("DOTENV")
+    dotenv.load_dotenv(dotenv_path=dotenv_path)
 
     parser = argparse.ArgumentParser(description="Generate code for the data layer")
     subparsers = parser.add_subparsers(dest="action", required=True)
@@ -94,9 +95,9 @@ def main():
             raise RuntimeError(f"Unknown action: {args.action}")
 
     except RuntimeError as e:
-        RED = "\033[91m"
-        RESET = "\033[0m"
-        print(f"{RED}{e}{RESET}", file=sys.stderr)
+        red = "\033[91m"
+        reset = "\033[0m"
+        print(f"{red}{e}{reset}", file=sys.stderr)
         print(file=sys.stderr)
         parser.print_help()
         exit(1)

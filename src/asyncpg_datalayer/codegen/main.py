@@ -4,6 +4,7 @@
 import os
 import pathlib
 import shutil
+import tempfile
 
 import asyncpg
 
@@ -75,10 +76,13 @@ class _Codegen:
     except ImportError:
         _HAS_FASTAPI = False
 
+    _CUSTOM_METHODS_DEL = "### custom methods go below ###"
+
     def __init__(self, postgres_url: str, codegen_dir: str):
         super().__init__()
         self.postgres_url = postgres_url
         self.codegen_dir = codegen_dir
+        self.codegen_dir_bak = None
         self._excluded_tables = ["_migrations"]
         self._env = None
 
@@ -202,6 +206,7 @@ class _Codegen:
             "record_insert_field_defs": record_insert_field_defs,
             "record_update_field_defs": record_update_field_defs,
             "has_fastapi": self._HAS_FASTAPI,
+            "custom_methods_delimiter": self._CUSTOM_METHODS_DEL,
         }
 
         rendered = template.render(context)
@@ -211,6 +216,21 @@ class _Codegen:
         code = self._generate_repository_code(table)
         filepath = os.path.join(self.codegen_dir, f"{table.table_name}_repository.py")
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
+
+        # Preserve custom methods from backup if any
+        if os.path.exists(self.codegen_dir_bak):
+            filepath_bak = os.path.join(
+                self.codegen_dir_bak, f"{table.table_name}_repository.py"
+            )
+            if os.path.exists(filepath_bak):
+                with open(filepath_bak, "r") as f:
+                    existing_code = f.read()
+                custom_methods = existing_code.split(self._CUSTOM_METHODS_DEL, 1)[1]
+                if custom_methods:
+                    if custom_methods.strip():
+                        custom_methods = f"\n\n{custom_methods}"
+                        code += custom_methods
+
         with open(filepath, "w") as f:
             f.write(code)
         return filepath
@@ -218,9 +238,12 @@ class _Codegen:
     async def generate(self):
         files = []
 
-        shutil.rmtree(self.codegen_dir, ignore_errors=True)
-        if not os.path.exists(self.codegen_dir):
-            os.makedirs(self.codegen_dir)
+        if os.path.exists(self.codegen_dir):
+            self.codegen_dir_bak = tempfile.mkdtemp()
+            shutil.copytree(self.codegen_dir, self.codegen_dir_bak, dirs_exist_ok=True)
+            shutil.rmtree(self.codegen_dir, ignore_errors=True)
+
+        os.makedirs(self.codegen_dir)
         _init = os.path.join(self.codegen_dir, "__init__.py")
         pathlib.Path(_init).touch(exist_ok=True)
 

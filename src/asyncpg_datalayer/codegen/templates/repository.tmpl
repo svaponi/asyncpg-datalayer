@@ -63,3 +63,5 @@ def get_db(request: fastapi.Request) -> DB:
 class {{ entity_name }}Repository(BaseRepository[{{ entity_name }}Record]):
     def __init__(self, db: DB{% if has_fastapi %} = fastapi.Depends(get_db){% endif %}) -> None:
         super().__init__(db, {{ entity_name }}Record)
+
+    {{ custom_methods_delimiter }}

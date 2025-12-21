@@ -212,24 +212,37 @@ class _Codegen:
         rendered = template.render(context)
         return rendered
 
+    def _retrieve_custom_methods(self, table: TableMetadata):
+        if not self.codegen_dir_bak:
+            return None
+        if not os.path.exists(self.codegen_dir_bak):
+            return None
+        filepath_bak = os.path.join(
+            self.codegen_dir_bak, f"{table.table_name}_repository.py"
+        )
+        if not os.path.exists(filepath_bak):
+            return None
+        with open(filepath_bak, "r") as f:
+            existing_code = f.read()
+        if self._CUSTOM_METHODS_DEL not in existing_code:
+            return None
+        existing_code_parts = existing_code.split(self._CUSTOM_METHODS_DEL, 1)
+        if len(existing_code_parts) < 2:
+            return None
+        custom_methods = existing_code_parts[1]
+        if not custom_methods.strip():
+            return None
+        return custom_methods
+
     def _generate_repository(self, table: TableMetadata):
         code = self._generate_repository_code(table)
         filepath = os.path.join(self.codegen_dir, f"{table.table_name}_repository.py")
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
 
         # Preserve custom methods from backup if any
-        if os.path.exists(self.codegen_dir_bak):
-            filepath_bak = os.path.join(
-                self.codegen_dir_bak, f"{table.table_name}_repository.py"
-            )
-            if os.path.exists(filepath_bak):
-                with open(filepath_bak, "r") as f:
-                    existing_code = f.read()
-                custom_methods = existing_code.split(self._CUSTOM_METHODS_DEL, 1)[1]
-                if custom_methods:
-                    if custom_methods.strip():
-                        custom_methods = f"\n\n{custom_methods}"
-                        code += custom_methods
+        custom_methods = self._retrieve_custom_methods(table)
+        if custom_methods:
+            code += custom_methods
 
         with open(filepath, "w") as f:
             f.write(code)

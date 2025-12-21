@@ -1,3 +1,4 @@
+import sys
 import uuid
 
 {% if has_fastapi %}
@@ -41,7 +42,20 @@ class {{ entity_name }}RecordUpdate(pydantic.BaseModel):
 {% if has_fastapi %}
 def get_db(request: fastapi.Request) -> DB:
     if not hasattr(request.app.state, "db"):
-        raise RuntimeError("DB not initialized in app state")
+        message = """DB not found in app.state.
+        Make sure to initialize the DB in your FastAPI app like this:
+
+        ```
+        import os
+        import fastapi
+        from asyncpg_datalayer.db_factory import create_db
+
+        app = fastapi.FastAPI()
+        app.state.db = create_db()
+        ```
+        """
+        print(message, file=sys.stderr)
+        raise RuntimeError("DB not found in app.state")
     return request.app.state.db
 {% endif %}
 

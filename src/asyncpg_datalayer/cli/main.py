@@ -47,7 +47,8 @@ def _codegen(postgres_url: str, codegen_dir: str) -> None:
 
 
 def main():
-    dotenv_path = os.environ.get("DOTENV")
+    dotenv_filename = os.environ.get("DOTENV")
+    dotenv_path = dotenv.find_dotenv(dotenv_filename)
     dotenv.load_dotenv(dotenv_path=dotenv_path)
 
     parser = argparse.ArgumentParser(description="Generate code for the data layer")

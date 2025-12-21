@@ -1,3 +1,4 @@
+import os
 import uuid
 
 import asyncpg
@@ -5,6 +6,7 @@ import pytest
 import pytest_asyncio
 from testcontainers.postgres import PostgresContainer
 
+import asyncpg_datalayer
 from asyncpg_datalayer.db import DB
 
 
@@ -34,3 +36,19 @@ async def postgres_url(postgres_container: PostgresContainer):
 @pytest.fixture
 def db(postgres_url):
     yield DB(postgres_url, echo=True)
+
+
+@pytest.fixture
+def src_dir():
+    asyncpg_datalayer_dir = os.path.dirname(asyncpg_datalayer.__file__)
+    return os.path.dirname(asyncpg_datalayer_dir)
+
+
+@pytest.fixture
+def migrations_dir(src_dir):
+    return os.path.join(src_dir, "_migrations")
+
+
+@pytest.fixture
+def codegen_dir(src_dir):
+    return os.path.join(src_dir, "_generated")

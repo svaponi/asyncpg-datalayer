@@ -6,7 +6,7 @@ from asyncpg_datalayer.cli.main import main
 from tests.testutils.mock_environ import mock_environ
 
 
-def test_cli_happy_path(monkeypatch, postgres_url):
+def test_cli_happy_path(monkeypatch, postgres_url, migrations_dir):
     with mock_environ(DOTENV=""):
         monkeypatch.setattr(
             sys,
@@ -17,14 +17,14 @@ def test_cli_happy_path(monkeypatch, postgres_url):
                 "--postgres-url",
                 postgres_url,
                 "--migrations-dir",
-                "./src/_migrations",
+                migrations_dir,
             ],
         )
         main()
 
 
-def test_cli_supports_with_env_vars(monkeypatch, postgres_url):
-    with mock_environ(POSTGRES_URL=postgres_url, MIGRATIONS_DIR="./src/_migrations"):
+def test_cli_supports_with_env_vars(monkeypatch, postgres_url, migrations_dir):
+    with mock_environ(POSTGRES_URL=postgres_url, MIGRATIONS_DIR=migrations_dir):
         monkeypatch.setattr(sys, "argv", ["prog", "migrate"])
         main()
 

@@ -5,6 +5,7 @@ from typing import AsyncIterator
 
 import asyncpg
 import sqlalchemy
+import sqlalchemy.exc
 from sqlalchemy.ext.asyncio import (
     create_async_engine,
     async_sessionmaker,
@@ -58,6 +59,7 @@ class DB:
 
         super().__init__()
         self.logger = logging.getLogger(__name__)
+        self.postgres_url = postgres_url
 
         # remove any None values from kwargs, it won't be accepted by create_async_engine
         engine_kwargs = {k: v for k, v in kwargs.items() if v is not None}
@@ -155,14 +157,14 @@ class DB:
     ) -> int:
         async with self.connection() as conn:
             response = await conn.execute(sqlalchemy.text(dml).params(**kwargs))
-            result = response.rowcount
+            result: int = response.rowcount
         return result
 
     async def exec_ddl(
         self,
         ddl: str,
-    ) -> typing.Any:
+    ) -> int:
         async with self.connection() as conn:
             response = await conn.execute(sqlalchemy.DDL(ddl))
-            result = response.rowcount
+            result: int = response.rowcount
         return result

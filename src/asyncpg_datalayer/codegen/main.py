@@ -68,6 +68,13 @@ class _Codegen:
         "time with time zone": "sqlalchemy.Time",
     }
 
+    try:
+        import fastapi
+
+        _HAS_FASTAPI = True
+    except ImportError:
+        _HAS_FASTAPI = False
+
     def __init__(self, postgres_url: str, codegen_dir: str):
         super().__init__()
         self.postgres_url = postgres_url
@@ -194,6 +201,7 @@ class _Codegen:
             "table_constraint_defs": table_constraint_defs,
             "record_insert_field_defs": record_insert_field_defs,
             "record_update_field_defs": record_update_field_defs,
+            "has_fastapi": self._HAS_FASTAPI,
         }
 
         rendered = template.render(context)

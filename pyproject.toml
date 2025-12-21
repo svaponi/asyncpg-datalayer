@@ -1,6 +1,6 @@
 [project]
 name = "asyncpg-datalayer"
-version = "0.0.1a0"
+version = "0.0.1a1"
 description = "Datalayer implementation for Postgres using asyncpg"
 repository = "https://github.com/svaponi/asyncpg-datalayer"
 authors = [

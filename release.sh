@@ -20,6 +20,8 @@ new_version=$(poetry version -s)
 
 git commit -am "Bump version from $old_version to $new_version"
 
-git tag -a "v$new_version" -m "Release v$new_version"
+git push
 
-git push --follow-tags
+git tag --force "v$new_version"
+
+git push --force origin "v$new_version"

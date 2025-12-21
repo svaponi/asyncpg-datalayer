@@ -209,11 +209,16 @@ class _Codegen:
     async def generate(self):
         files = []
 
-        if not os.path.exists(self.codegen_dir):
+        if os.path.exists(self.codegen_dir):
+            # remove target dirs
+            shutil.rmtree(self.codegen_dir, ignore_errors=True)
+        else:
             os.makedirs(self.codegen_dir)
 
-        # remove target dirs
-        shutil.rmtree(self.codegen_dir, ignore_errors=True)
+        _init = os.path.join(self.codegen_dir, "__init__.py")
+        if not os.path.exists(_init):
+            with open(_init, "w") as f:
+                f.write("")
 
         connection = await asyncpg.connect(self.postgres_url)
         try:

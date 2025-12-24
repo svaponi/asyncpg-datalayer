@@ -107,7 +107,7 @@ class _Codegen:
         if column_default.startswith("uuid_generate_v4"):
             return "uuid.uuid4()"
         if column_default.startswith("now()"):
-            return "datetime.datetime.now()"
+            return "pydantic.Field(default_factory=datetime.datetime.now)"
         if column_default.startswith("ARRAY[]"):
             return "pydantic.Field(default_factory=list)"
         raise RuntimeError(f"unsupported {column_default=}")

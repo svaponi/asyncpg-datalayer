@@ -238,7 +238,7 @@ class _Codegen:
 
     def _generate_repository(self, table: TableMetadata):
         code = self._generate_repository_code(table)
-        filepath = os.path.join(self.codegen_dir, f"{table.table_name}_repository.py")
+        filepath = os.path.join(self.codegen_dir, f"{table.table_name}.py")
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
 
         # Preserve custom methods from backup if any
@@ -257,9 +257,8 @@ class _Codegen:
             table_name = table.table_name
             entity_name = self._to_entity_name(table)
             repo_class_name = f"{entity_name}Repository"
-            repo_var_name = f"{table_name}_repository"
-            imports.append(f"from .{repo_var_name} import {repo_class_name}")
-            constructors.append(f"self.{repo_var_name} = {repo_class_name}(db)")
+            imports.append(f"from .{table_name} import {repo_class_name}")
+            constructors.append(f"self.{table_name} = {repo_class_name}(db)")
 
         sorted(imports)
         sorted(constructors)
@@ -277,7 +276,7 @@ class _Codegen:
 
     def _generate_facade(self, tables: list[TableMetadata]):
         code = self._generate_facade_code(tables)
-        filepath = os.path.join(self.codegen_dir, f"datalayer_facade.py")
+        filepath = os.path.join(self.codegen_dir, f"facade.py")
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
 
         with open(filepath, "w") as f:

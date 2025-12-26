@@ -133,12 +133,13 @@ class _Codegen:
         assert sqlalchemy_type, f"unsupported {sqlalchemy_type=}"
         return sqlalchemy_type
 
-    def _generate_repository_code(self, table: TableMetadata):
-        template = self._jinja2().get_template("repository.tmpl")
+    def _to_entity_name(self, table: TableMetadata) -> str:
+        return "".join(s.capitalize() for s in table.table_name.split("_"))
 
+    def _generate_repository_code(self, table: TableMetadata):
         table_name = table.table_name
         table_pk_names = table.pk_names
-        entity_name = "".join(s.capitalize() for s in table_name.split("_"))
+        entity_name = self._to_entity_name(table)
 
         table_field_defs = []
         table_constraint_defs = []
@@ -209,6 +210,7 @@ class _Codegen:
             "custom_methods_delimiter": self._CUSTOM_METHODS_DEL,
         }
 
+        template = self._jinja2().get_template("repository.tmpl")
         rendered = template.render(context)
         return rendered
 
@@ -248,6 +250,40 @@ class _Codegen:
             f.write(code)
         return filepath
 
+    def _generate_facade_code(self, tables: list[TableMetadata]):
+        imports = []
+        constructors = []
+        for table in tables:
+            table_name = table.table_name
+            entity_name = self._to_entity_name(table)
+            repo_class_name = f"{entity_name}Repository"
+            repo_var_name = f"{table_name}_repository"
+            imports.append(f"from .{repo_var_name} import {repo_class_name}")
+            constructors.append(f"self.{repo_var_name} = {repo_class_name}(db)")
+
+        sorted(imports)
+        sorted(constructors)
+
+        context = {
+            "imports": imports,
+            "constructors": constructors,
+            "has_fastapi": self._HAS_FASTAPI,
+            "custom_methods_delimiter": self._CUSTOM_METHODS_DEL,
+        }
+
+        template = self._jinja2().get_template("facade.tmpl")
+        rendered = template.render(context)
+        return rendered
+
+    def _generate_facade(self, tables: list[TableMetadata]):
+        code = self._generate_facade_code(tables)
+        filepath = os.path.join(self.codegen_dir, f"datalayer_facade.py")
+        os.makedirs(os.path.dirname(filepath), exist_ok=True)
+
+        with open(filepath, "w") as f:
+            f.write(code)
+        return filepath
+
     async def generate(self):
         files = []
 
@@ -263,10 +299,14 @@ class _Codegen:
         connection = await asyncpg.connect(self.postgres_url)
         try:
             _metadata = await load_metadata(connection)
-            for table in _metadata:
-                if table.table_name in self._excluded_tables:
-                    continue
+            tables = [
+                table
+                for table in _metadata
+                if table.table_name not in self._excluded_tables
+            ]
+            for table in tables:
                 files.append(self._generate_repository(table))
+            files.append(self._generate_facade(tables))
 
         finally:
             await connection.close()

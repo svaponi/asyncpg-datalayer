@@ -32,10 +32,7 @@ def create_db(environ: Mapping = os.environ) -> DB:
     return DB(
         getenv_or_fail("POSTGRES_URL"),
         echo=getenv_bool("LOG_SQL"),
-        # https://docs.sqlalchemy.org/en/20/core/engines.html#sqlalchemy.create_engine.params.pool_size
         pool_size=getenv_int("POOL_SIZE"),
-        # https://docs.sqlalchemy.org/en/20/core/engines.html#sqlalchemy.create_engine.params.pool_timeout
         pool_timeout=getenv_int("POOL_TIMEOUT"),
-        # https://docs.sqlalchemy.org/en/20/core/engines.html#sqlalchemy.create_engine.params.max_overflow
         max_overflow=getenv_int("POOL_MAX_OVERFLOW"),
     )

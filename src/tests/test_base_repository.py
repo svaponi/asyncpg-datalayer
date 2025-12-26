@@ -9,7 +9,8 @@ from sqlalchemy import (
     Uuid,
     String,
     DateTime,
-    ForeignKeyConstraint, Boolean,
+    ForeignKeyConstraint,
+    Boolean,
 )
 from sqlalchemy.ext.asyncio import AsyncAttrs
 from sqlalchemy.orm import Mapped, mapped_column, DeclarativeBase, relationship
@@ -444,7 +445,9 @@ async def test_criteria_and_or(user_repository):
 
 
 @pytest.mark.asyncio
-async def test_insert_multikey(location_repository, tax_repository, location_tax_repository):
+async def test_insert_multikey(
+    location_repository, tax_repository, location_tax_repository
+):
     ca_location_id = await location_repository.insert(
         dict(location_id=uuid.uuid4(), name="canada")
     )
@@ -490,7 +493,9 @@ async def test_insert_multikey(location_repository, tax_repository, location_tax
 
 
 @pytest.mark.asyncio
-async def test_insert_many_multikey(location_repository, tax_repository, location_tax_repository):
+async def test_insert_many_multikey(
+    location_repository, tax_repository, location_tax_repository
+):
     ca_location_id = await location_repository.insert(
         dict(location_id=uuid.uuid4(), name="canada")
     )

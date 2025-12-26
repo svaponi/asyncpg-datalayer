@@ -6,17 +6,16 @@ from typing import AsyncIterator
 import asyncpg
 import sqlalchemy
 import sqlalchemy.exc
+from asyncpg_datalayer.errors import (
+    TooManyConnectionsException,
+    PoolOverflowException,
+    ConstraintViolationException,
+)
 from sqlalchemy.ext.asyncio import (
     create_async_engine,
     async_sessionmaker,
     AsyncSession,
     AsyncConnection,
-)
-
-from asyncpg_datalayer.errors import (
-    TooManyConnectionsException,
-    PoolOverflowException,
-    ConstraintViolationException,
 )
 
 _REQUIRED_PREFIX = "postgresql+asyncpg://"
@@ -51,7 +50,21 @@ def get_asyncpg_cause(err: Exception):
 
 class DB:
 
-    def __init__(self, postgres_url: str, **kwargs):
+    def __init__(
+        self,
+        postgres_url: str,
+        # https://docs.sqlalchemy.org/en/20/core/engines.html#sqlalchemy.create_engine.params.echo
+        echo: bool | None = None,
+        # https://docs.sqlalchemy.org/en/20/core/engines.html#sqlalchemy.create_engine.params.echo_pool
+        echo_pool: bool | None = None,
+        # https://docs.sqlalchemy.org/en/20/core/engines.html#sqlalchemy.create_engine.params.pool_size
+        pool_size: int | None = None,
+        # https://docs.sqlalchemy.org/en/20/core/engines.html#sqlalchemy.create_engine.params.pool_timeout
+        pool_timeout: int | None = None,
+        # https://docs.sqlalchemy.org/en/20/core/engines.html#sqlalchemy.create_engine.params.max_overflow
+        max_overflow: int | None = None,
+        **kwargs,
+    ):
         """
         If used within the application lifetime, the session can be initiated at startup and closed at shutdown, with
         the setup() and close() methods respectively.
@@ -60,6 +73,11 @@ class DB:
         super().__init__()
         self.logger = logging.getLogger(__name__)
         self.postgres_url = postgres_url
+        self.echo = echo
+        self.echo_pool = echo_pool
+        self.pool_size = pool_size
+        self.pool_timeout = pool_timeout
+        self.max_overflow = max_overflow
 
         # remove any None values from kwargs, it won't be accepted by create_async_engine
         engine_kwargs = {k: v for k, v in kwargs.items() if v is not None}
@@ -68,6 +86,11 @@ class DB:
             sanitize_postgres_url(postgres_url),
             future=True,
             pool_pre_ping=True,  # prevents connection is closed error, see https://sqlalche.me/e/20/rvf5
+            echo=self.echo,
+            echo_pool=self.echo_pool,
+            pool_size=self.pool_size,
+            pool_timeout=self.pool_timeout,
+            max_overflow=self.max_overflow,
             **engine_kwargs,
         )
 

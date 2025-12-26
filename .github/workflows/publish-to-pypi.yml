@@ -2,10 +2,9 @@ name: Release
 run-name: Publish to PyPi 🚀
 on:
   workflow_dispatch:
-# Disable automatic publishing for now
-#  push:
-#    tags:
-#      - 'v*.*.*'
+  push:
+    tags:
+      - 'v*.*.*'
 jobs:
   Publish-to-PyPi:
     runs-on: ubuntu-latest

@@ -219,9 +219,7 @@ class _Codegen:
             return None
         if not os.path.exists(self.codegen_dir_bak):
             return None
-        filepath_bak = os.path.join(
-            self.codegen_dir_bak, f"{table.table_name}_repository.py"
-        )
+        filepath_bak = os.path.join(self.codegen_dir_bak, f"{table.table_name}.py")
         if not os.path.exists(filepath_bak):
             return None
         with open(filepath_bak, "r") as f:

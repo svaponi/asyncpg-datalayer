@@ -23,7 +23,7 @@ async def test_generate_code(postgres_url):
     await generate_code(postgres_url, codegen_dir)
 
     # now add some custom code to a generated file and ensure it is preserved
-    repo_path = os.path.join(codegen_dir, "org_repository.py")
+    repo_path = os.path.join(codegen_dir, "org.py")
     with open(repo_path, "a") as f:
         f.write("# I am here to stay!\n")
     await generate_code(postgres_url, codegen_dir)

@@ -1,3 +1,4 @@
+import os
 import sys
 
 import pytest
@@ -12,7 +13,7 @@ def test_cli_happy_path(monkeypatch, postgres_url, migrations_dir):
             sys,
             "argv",
             [
-                "prog",
+                "path/to/executable",
                 "migrate",
                 "--postgres-url",
                 postgres_url,
@@ -21,25 +22,30 @@ def test_cli_happy_path(monkeypatch, postgres_url, migrations_dir):
             ],
         )
         main()
+        monkeypatch.undo()
 
 
 def test_cli_supports_with_env_vars(monkeypatch, postgres_url, migrations_dir):
     with mock_environ(POSTGRES_URL=postgres_url, MIGRATIONS_DIR=migrations_dir):
-        monkeypatch.setattr(sys, "argv", ["prog", "migrate"])
+        monkeypatch.setattr(sys, "argv", ["path/to/executable", "migrate"])
         main()
+        monkeypatch.undo()
 
 
-def test_cli_supports_with_dotenv(monkeypatch, postgres_url, migrations_dir):
-    with open(".env.local", "w") as env_file:
+def test_cli_supports_with_dotenv(monkeypatch, postgres_url, src_dir, migrations_dir):
+    root_dir = os.path.dirname(src_dir)
+    with open(os.path.join(root_dir, ".env.local"), "w") as env_file:
         env_file.write(f"POSTGRES_URL={postgres_url}\n")
         env_file.write(f"MIGRATIONS_DIR={migrations_dir}\n")
     with mock_environ(DOTENV=".env.local"):
-        monkeypatch.setattr(sys, "argv", ["prog", "migrate"])
+        monkeypatch.setattr(sys, "argv", ["path/to/executable", "migrate"])
         main()
+        monkeypatch.undo()
 
 
 def test_cli_missing_postgres(monkeypatch):
     with mock_environ(POSTGRES_URL="", MIGRATIONS_DIR=""):
-        monkeypatch.setattr(sys, "argv", ["prog", "migrate"])
+        monkeypatch.setattr(sys, "argv", ["path/to/executable", "migrate"])
         with pytest.raises(SystemExit):
             main()
+        monkeypatch.undo()

@@ -14,7 +14,7 @@ from asyncpg_datalayer.base_table import Base
 from asyncpg_datalayer.db import DB
 
 
-class {{ entity_name }}Table(Base):
+class _{{ entity_name }}Table(Base):
     __tablename__ = "{{ table_name }}"
     __table_args__ = (
         {% if table_pk_names %}sqlalchemy.PrimaryKeyConstraint({% for pk_name in table_pk_names %}"{{ pk_name }}", {% endfor %}name="{{ table_name }}_pkey"),{% endif %}
@@ -25,7 +25,7 @@ class {{ entity_name }}Table(Base):
     {% endfor %}
 
 
-{{ entity_name }}Record = {{ entity_name }}Table
+{{ entity_name }}Record = _{{ entity_name }}Table
 
 
 class {{ entity_name }}RecordInsert(pydantic.BaseModel):

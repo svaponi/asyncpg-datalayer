@@ -239,48 +239,70 @@ async def test_pagination(user_repository):
 
 @pytest.mark.asyncio
 async def test_scrolling_order(user_repository):
-    inserted_ids = [
-        await user_repository.insert(dict(email=f"foo{i}@example.com"))
-        for i in range(10)
-    ]
+    async def _create(email):
+        return await user_repository.insert(dict(email=email))
 
-    page_1, count_1, cursor_1 = await user_repository.scroll(
+    inserted_ids = [await _create(email=f"foo{i}@example.com") for i in range(10)]
+
+    page_1a, count_1a, cursor_1a = await user_repository.scroll(
         size=8,
         sort_by="created_at",
     )
-    assert len(page_1) == 8
-    assert count_1 == 10
-    assert page_1[0].user_id == inserted_ids[0]
-    assert page_1[7].user_id == inserted_ids[7]
-    page_2, count_2, cursor_2 = await user_repository.scroll(
-        cursor=cursor_1,
+    assert len(page_1a) == 8
+    assert count_1a == 10
+    assert cursor_1a is not None
+    assert page_1a[0].user_id == inserted_ids[0]
+    assert page_1a[7].user_id == inserted_ids[7]
+
+    page_2a, count_2a, cursor_2a = await user_repository.scroll(
+        cursor=cursor_1a,
         size=8,
         sort_by="created_at",
-        skip_count=True,
     )
-    assert len(page_2) == 2
-    assert count_2 == -1
-    assert page_2[0].user_id == inserted_ids[8]
-    assert page_2[1].user_id == inserted_ids[9]
+    assert len(page_2a) == 2
+    assert count_2a == 10
+    assert cursor_2a is not None
+    assert page_2a[0].user_id == inserted_ids[8]
+    assert page_2a[1].user_id == inserted_ids[9]
 
-    page_1, count_1, cursor_1 = await user_repository.scroll(
+    page_3a, count_3a, cursor_3a = await user_repository.scroll(
+        cursor=cursor_2a,
+        size=8,
+        sort_by="created_at",
+    )
+    assert len(page_3a) == 0
+    assert count_3a == 10
+    assert cursor_3a is None
+
+    page_1d, count_1d, cursor_1d = await user_repository.scroll(
         size=8,
         sort_by="created_at:desc",
     )
-    assert len(page_1) == 8
-    assert count_1 == 10
-    assert page_1[0].user_id == inserted_ids[9]
-    assert page_1[7].user_id == inserted_ids[2]
-    page_2, count_2, cursor_2 = await user_repository.scroll(
-        cursor=cursor_1,
+    assert len(page_1d) == 8
+    assert count_1d == 10
+    assert cursor_1d is not None
+    assert page_1d[0].user_id == inserted_ids[9]
+    assert page_1d[7].user_id == inserted_ids[2]
+
+    page_2d, count_2d, cursor_2d = await user_repository.scroll(
+        cursor=cursor_1d,
         size=8,
         sort_by="created_at:desc",
-        skip_count=True,
     )
-    assert len(page_2) == 2
-    assert count_2 == -1
-    assert page_2[0].user_id == inserted_ids[1]
-    assert page_2[1].user_id == inserted_ids[0]
+    assert len(page_2d) == 2
+    assert count_2d == 10
+    assert cursor_2d is not None
+    assert page_2d[0].user_id == inserted_ids[1]
+    assert page_2d[1].user_id == inserted_ids[0]
+
+    page_3d, count_3d, cursor_3d = await user_repository.scroll(
+        cursor=cursor_2d,
+        size=8,
+        sort_by="created_at:desc",
+    )
+    assert len(page_3d) == 0
+    assert count_3d == 10
+    assert cursor_3d is None
 
 
 @pytest.mark.asyncio

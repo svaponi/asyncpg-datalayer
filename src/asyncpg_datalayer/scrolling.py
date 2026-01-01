@@ -102,24 +102,25 @@ def with_scrolling(
     return query
 
 
+_VALUE = "v"
+_TYPE = "$t"
+
 class _CustomEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, uuid.UUID):
-            return ["uuid", obj.hex]
+            return {_TYPE: "uuid", _VALUE: obj.hex}
         if isinstance(obj, datetime.datetime):
-            return ["datetime", int(obj.timestamp())]
+            return {_TYPE: "datetime", _VALUE: obj.timestamp()}
         return super().default(obj)
 
-    @classmethod
-    def decode(cls, obj):
-        if isinstance(obj, list):
-            t, v = obj
-            if t == "uuid":
-                return uuid.UUID(hex=v)
-            if t == "datetime":
-                return datetime.datetime.fromtimestamp(v)
-        return obj
-
+def _custom_decode(obj):
+    v = obj.get(_VALUE)
+    t = obj.get(_TYPE)
+    if t == "uuid":
+        return uuid.UUID(hex=v)
+    if t == "datetime":
+        return datetime.datetime.fromtimestamp(v)
+    return obj
 
 def _encode_cursor(cursor_parts: dict) -> str:
     raw = json.dumps(cursor_parts, cls=_CustomEncoder).encode("utf-8")
@@ -129,4 +130,4 @@ def _encode_cursor(cursor_parts: dict) -> str:
 def _decode_cursor(cursor: str) -> dict:
     padding = "=" * (-len(cursor) % 4)
     raw = base64.urlsafe_b64decode(cursor + padding)
-    return json.loads(raw, object_hook=_CustomEncoder.decode)
+    return json.loads(raw, object_hook=_custom_decode)

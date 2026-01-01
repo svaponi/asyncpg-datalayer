@@ -143,7 +143,7 @@ class BaseRepository(typing.Generic[Record]):
             count_query = self._with_filters(count_query, filters)
 
         sort_asc = True
-        sort_col = self.primary_key
+        sort_col = self.primary_keys[0]
         order_by_cols = self.primary_keys[1:]
         if sort_by:
             sort_field, sort_asc = parse_sort_by(sort_by)
@@ -153,7 +153,7 @@ class BaseRepository(typing.Generic[Record]):
         query = with_scrolling(
             query=query,
             cursor=cursor,
-            size=size,
+            size=size or 10,
             sort_asc=sort_asc,
             sort_col=sort_col,
             order_by_cols=order_by_cols,
@@ -179,7 +179,7 @@ class BaseRepository(typing.Generic[Record]):
             last_cursor = build_cursor(
                 last_record,
                 sort_col=sort_col,
-                order_by_cols=self.primary_keys,
+                order_by_cols=order_by_cols,
             )
         return results, count, last_cursor
 
@@ -204,7 +204,7 @@ class BaseRepository(typing.Generic[Record]):
             count_query = self._with_filters(count_query, filters)
 
         sort_asc = True
-        sort_col = self.primary_key
+        sort_col = self.primary_keys[0]
         order_by_cols = self.primary_keys[1:]
         if sort_by:
             sort_field, sort_asc = parse_sort_by(sort_by)
@@ -213,8 +213,8 @@ class BaseRepository(typing.Generic[Record]):
 
         query = with_pagination(
             query=query,
-            page=page,
-            size=size,
+            page=page or 1,
+            size=size or 10,
             sort_asc=sort_asc,
             sort_col=sort_col,
             order_by_cols=order_by_cols,

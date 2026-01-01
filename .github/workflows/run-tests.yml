@@ -2,29 +2,23 @@ name: Test
 run-name: Run Tests 🧪
 on:
   push:
+    tags-ignore:
+      - 'v*.*.*'
     paths:
       - 'src/asyncpg_datalayer/**'
       - 'src/tests/**'
       - '.github/workflows/run-tests.yml'
+      - '.github/actions/run-tests/**'
 jobs:
   Run-Tests:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [ "3.12", "3.13" ]
+        python-version: [ "3.12", "3.13", "3.14" ]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Install poetry
-        run: pipx install poetry
-      - name: Set up python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+      - name: Run tests
+        uses: ./.github/actions/run-tests
         with:
           python-version: ${{ matrix.python-version }}
-          cache: 'poetry'
-      - name: Install dependencies
-        run: |
-          poetry install --with codegen,fastapi
-      - name: Run tests
-        run: |
-          poetry run pytest

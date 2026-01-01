@@ -1,8 +1,6 @@
-import typing
-
 import sqlalchemy.orm.attributes
 
-GetCol = typing.Callable[[str], sqlalchemy.orm.attributes.InstrumentedAttribute]
+from asyncpg_datalayer.types import GetCol
 
 
 def with_pagination_and_sorting(
@@ -13,7 +11,6 @@ def with_pagination_and_sorting(
     get_col_func: GetCol,
     default_order_bys: list[sqlalchemy.orm.attributes.InstrumentedAttribute],
 ) -> sqlalchemy.sql.Select:
-
     if sort_by:
         sort_field, sort_asc = parse_sort_by(sort_by)
         try:

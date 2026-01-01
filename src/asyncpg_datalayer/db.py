@@ -6,16 +6,17 @@ from typing import AsyncIterator
 import asyncpg
 import sqlalchemy
 import sqlalchemy.exc
-from asyncpg_datalayer.errors import (
-    TooManyConnectionsException,
-    PoolOverflowException,
-    ConstraintViolationException,
-)
 from sqlalchemy.ext.asyncio import (
     create_async_engine,
     async_sessionmaker,
     AsyncSession,
     AsyncConnection,
+)
+
+from asyncpg_datalayer.errors import (
+    TooManyConnectionsException,
+    PoolOverflowException,
+    ConstraintViolationException,
 )
 
 _REQUIRED_PREFIX = "postgresql+asyncpg://"
@@ -80,17 +81,24 @@ class DB:
         self.max_overflow = max_overflow
 
         # remove any None values from kwargs, it won't be accepted by create_async_engine
-        engine_kwargs = {k: v for k, v in kwargs.items() if v is not None}
+        engine_kwargs = {
+            k: v
+            for k, v in dict(
+                echo=self.echo,
+                echo_pool=self.echo_pool,
+                pool_size=self.pool_size,
+                pool_timeout=self.pool_timeout,
+                max_overflow=self.max_overflow,
+                **kwargs,
+            ).items()
+            if v is not None
+        }
         self.logger.info(f"create_async_engine kwargs: {engine_kwargs}")
+
         self.engine = create_async_engine(
             sanitize_postgres_url(postgres_url),
             future=True,
             pool_pre_ping=True,  # prevents connection is closed error, see https://sqlalche.me/e/20/rvf5
-            echo=self.echo,
-            echo_pool=self.echo_pool,
-            pool_size=self.pool_size,
-            pool_timeout=self.pool_timeout,
-            max_overflow=self.max_overflow,
             **engine_kwargs,
         )
 

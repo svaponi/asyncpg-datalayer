@@ -238,6 +238,52 @@ async def test_pagination(user_repository):
 
 
 @pytest.mark.asyncio
+async def test_scrolling_order(user_repository):
+    inserted_ids = [
+        await user_repository.insert(dict(email=f"foo{i}@example.com"))
+        for i in range(10)
+    ]
+
+    page_1, count_1, cursor_1 = await user_repository.scroll(
+        size=8,
+        sort_by="created_at",
+    )
+    assert len(page_1) == 8
+    assert count_1 == 10
+    assert page_1[0].user_id == inserted_ids[0]
+    assert page_1[7].user_id == inserted_ids[7]
+    page_2, count_2, cursor_2 = await user_repository.scroll(
+        cursor=cursor_1,
+        size=8,
+        sort_by="created_at",
+        skip_count=True,
+    )
+    assert len(page_2) == 2
+    assert count_2 == -1
+    assert page_2[0].user_id == inserted_ids[8]
+    assert page_2[1].user_id == inserted_ids[9]
+
+    page_1, count_1, cursor_1 = await user_repository.scroll(
+        size=8,
+        sort_by="created_at:desc",
+    )
+    assert len(page_1) == 8
+    assert count_1 == 10
+    assert page_1[0].user_id == inserted_ids[9]
+    assert page_1[7].user_id == inserted_ids[2]
+    page_2, count_2, cursor_2 = await user_repository.scroll(
+        cursor=cursor_1,
+        size=8,
+        sort_by="created_at:desc",
+        skip_count=True,
+    )
+    assert len(page_2) == 2
+    assert count_2 == -1
+    assert page_2[0].user_id == inserted_ids[1]
+    assert page_2[1].user_id == inserted_ids[0]
+
+
+@pytest.mark.asyncio
 async def test_pagination_order(user_repository):
     inserted_ids = [
         await user_repository.insert(dict(email=f"foo{i}@example.com"))

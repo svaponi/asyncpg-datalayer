@@ -13,9 +13,9 @@ import sqlalchemy.orm
 
 from asyncpg_datalayer.criteria import Criteria
 from asyncpg_datalayer.db import DB
-from asyncpg_datalayer.pagination_and_sorting import (
-    with_pagination_and_sorting,
-)
+from asyncpg_datalayer.pagination import with_pagination
+from asyncpg_datalayer.pagination_and_sorting import parse_sort_by
+from asyncpg_datalayer.scrolling import build_cursor, with_scrolling
 from asyncpg_datalayer.types import Col, Obj, Filters
 
 _LAST_MODIFIED_AT = "last_modified_at"
@@ -122,6 +122,68 @@ class BaseRepository(typing.Generic[Record]):
             count = count_response.scalar()
         return count
 
+
+    async def scroll(
+        self,
+        size: int,
+        cursor: str | None = None,
+        sort_by: str| None = None,
+        filters: Filters | None = None,
+        skip_count: bool = False,
+        reuse_session: sqlalchemy.ext.asyncio.AsyncSession = None,
+    ) -> tuple[list[Record], int, str]:
+        query = sqlalchemy.select(self.record_cls)
+        query = self._with_filters(query, filters)
+        if skip_count:
+            count_query = None
+        else:
+            count_query = sqlalchemy.select(sqlalchemy.func.count()).select_from(
+                self.record_cls
+            )
+            count_query = self._with_filters(count_query, filters)
+
+        sort_asc = True
+        sort_col = self.primary_key
+        order_by_cols = self.primary_keys[1:]
+        if sort_by:
+            sort_field, sort_asc = parse_sort_by(sort_by)
+            sort_col = self._get_col(sort_field)
+            order_by_cols = self.primary_keys
+
+        query = with_scrolling(
+            query=query,
+            cursor=cursor,
+            size=size,
+            sort_asc=sort_asc,
+            sort_col=sort_col,
+            order_by_cols=order_by_cols,
+        )
+
+        async def _get_results():
+            async with self.db.get_session(reuse_session, readonly=True) as session1:
+                return (await session1.execute(query)).scalars().all()
+
+        async def _get_count():
+            async with self.db.get_session(reuse_session, readonly=True) as session2:
+                return (await session2.execute(count_query)).scalar()
+
+        if count_query is not None:
+            results, count = await asyncio.gather(_get_results(), _get_count())
+        else:
+            results = await _get_results()
+            count = -1
+
+        last_cursor = None
+        if results:
+            last_record = results[-1]
+            last_cursor = build_cursor(
+                last_record,
+                sort_col=sort_col,
+                order_by_cols=self.primary_keys,
+            )
+        return results, count, last_cursor
+
+
     async def get_page(
         self,
         page: int | None = None,
@@ -141,13 +203,21 @@ class BaseRepository(typing.Generic[Record]):
             )
             count_query = self._with_filters(count_query, filters)
 
-        query = with_pagination_and_sorting(
+        sort_asc = True
+        sort_col = self.primary_key
+        order_by_cols = self.primary_keys[1:]
+        if sort_by:
+            sort_field, sort_asc = parse_sort_by(sort_by)
+            sort_col = self._get_col(sort_field)
+            order_by_cols = self.primary_keys
+
+        query = with_pagination(
             query=query,
             page=page,
             size=size,
-            sort_by=sort_by,
-            get_col_func=self._get_col,
-            default_order_bys=[*self.primary_keys],
+            sort_asc=sort_asc,
+            sort_col=sort_col,
+            order_by_cols=order_by_cols,
         )
 
         async def _get_results():

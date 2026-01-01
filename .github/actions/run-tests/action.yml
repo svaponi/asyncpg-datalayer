@@ -1,0 +1,26 @@
+name: Test
+description: Run Tests 🧪
+inputs:
+  python-version:
+    required: true
+    description: "python-version"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install poetry
+      shell: bash
+      run: pipx install poetry
+    - name: Set up python ${{ inputs.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ inputs.python-version }}
+        cache: 'poetry'
+    - name: Install dependencies
+      shell: bash
+      run: |
+        poetry install --no-root --with codegen,fastapi
+    - name: Run tests
+      shell: bash
+      run: |
+        poetry run pytest

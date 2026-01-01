@@ -1,7 +1,10 @@
 name: Test
 run-name: Run Tests 🧪
 on:
+  workflow_dispatch:
   push:
+    branches-ignore:
+      - 'refs/tags/*'
     paths:
       - 'src/asyncpg_datalayer/**'
       - 'src/tests/**'

@@ -1,7 +1,7 @@
 import asyncio
 import contextlib
+import datetime
 import logging
-import random
 import typing
 from typing import Optional
 
@@ -30,31 +30,36 @@ class DBEvents:
         self._subscribers: list[asyncio.Queue[str | None]] = []
 
     async def _connect(self) -> None:
-        """Establish asyncpg connection and add listener."""
-        async with self._connection_lock:
-            if self._connection:
-                return
-            try:
-                self._connection = await asyncpg.connect(self.db.postgres_url)
-                await self._connection.add_listener(self.channel, self._dispatch)
-                self.logger.info("LISTEN connected on channel %s", self.channel)
-            except Exception:
-                self.logger.exception(
-                    "Failed to connect LISTEN on channel %s", self.channel
-                )
-                self._connection = None
-                raise
+        if not self._connection:
+            async with self._connection_lock:
+                if not self._connection:
+                    try:
+                        self._connection = await asyncpg.connect(self.db.postgres_url)
+                        await self._connection.add_listener(
+                            self.channel, self._dispatch
+                        )
+                        self.logger.info("LISTEN connected on channel %s", self.channel)
+                    except Exception:
+                        self.logger.exception(
+                            "Failed to connect LISTEN on channel %s", self.channel
+                        )
+                        self._connection = None
+                        raise
 
     async def _disconnect(self) -> None:
-        """Close asyncpg connection."""
-        async with self._connection_lock:
-            if self._connection:
-                await self._connection.close()
-                self._connection = None
-                self.logger.info("LISTEN connection closed")
+        if self._connection:
+            async with self._connection_lock:
+                if self._connection:
+                    await self._connection.close()
+                    self._connection = None
+                    self.logger.info("LISTEN connection closed")
 
     def _dispatch(
-        self, connection: asyncpg.Connection, pid: int, channel: str, payload: str
+        self,
+        connection: asyncpg.Connection,
+        pid: int,
+        channel: str,
+        payload: str,
     ):
         self._emit(payload)
 
@@ -66,20 +71,25 @@ class DBEvents:
                 self.logger.warning("Subscriber queue full, dropping event")
 
     async def _reconnect_loop(self):
-        """Background task that reconnects if connection drops."""
         retry_delay = 1
         max_delay = 30
+        last_attempt = datetime.datetime.now()
         while not self._stop_event.is_set():
             if not self._connection or self._connection.is_closed():
                 try:
+                    elapsed = datetime.datetime.now() - last_attempt
+                    elapsed = elapsed.total_seconds()
+                    if elapsed < retry_delay:
+                        await asyncio.sleep(retry_delay - elapsed)
+
                     self.logger.warning("LISTEN connection lost, reconnecting...")
+                    last_attempt = datetime.datetime.now()
                     await self._connect()
                     retry_delay = 1  # reset after success
                 except Exception:
                     self.logger.error(
-                        "Reconnect failed, retrying in %.1fs...", retry_delay
+                        f"Reconnect failed, retrying in {retry_delay}s..."
                     )
-                    await asyncio.sleep(retry_delay + random.random())  # jitter
                     retry_delay = min(max_delay, retry_delay * 2)
             else:
                 await asyncio.sleep(1)

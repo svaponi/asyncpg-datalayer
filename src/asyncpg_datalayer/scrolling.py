@@ -1,9 +1,8 @@
 import base64
-import datetime
-import json
-import uuid
 
 import sqlalchemy.orm.attributes
+
+from asyncpg_datalayer import json2
 
 
 def build_cursor(
@@ -102,35 +101,12 @@ def with_scrolling(
     return query
 
 
-_VALUE = "v"
-_TYPE = "$t"
-
-
-class _CustomEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, uuid.UUID):
-            return {_TYPE: "uuid", _VALUE: obj.hex}
-        if isinstance(obj, datetime.datetime):
-            return {_TYPE: "datetime", _VALUE: obj.timestamp()}
-        return super().default(obj)
-
-
-def _custom_decode(obj):
-    v = obj.get(_VALUE)
-    t = obj.get(_TYPE)
-    if t == "uuid":
-        return uuid.UUID(hex=v)
-    if t == "datetime":
-        return datetime.datetime.fromtimestamp(v)
-    return obj
-
-
 def _encode_cursor(cursor_parts: dict) -> str:
-    raw = json.dumps(cursor_parts, cls=_CustomEncoder).encode("utf-8")
+    raw = json2.dumps(cursor_parts).encode("utf-8")
     return base64.urlsafe_b64encode(raw).rstrip(b"=").decode("utf-8")
 
 
 def _decode_cursor(cursor: str) -> dict:
     padding = "=" * (-len(cursor) % 4)
     raw = base64.urlsafe_b64decode(cursor + padding)
-    return json.loads(raw, object_hook=_custom_decode)
+    return json2.loads(raw)

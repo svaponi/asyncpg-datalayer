@@ -2,15 +2,12 @@ import asyncio
 import logging
 import random
 import typing
-from typing import Any, Optional
+from typing import Optional
 
 import asyncpg
 import sqlalchemy
 
-from asyncpg_datalayer import json2
 from asyncpg_datalayer.db import DB
-
-Event = dict[str, Any]
 
 
 class DBEvents:
@@ -29,7 +26,7 @@ class DBEvents:
         self._reconnect_task: Optional[asyncio.Task] = None
         self._stop_event = asyncio.Event()
 
-        self._subscribers: list[asyncio.Queue[Event | None]] = []
+        self._subscribers: list[asyncio.Queue[str | None]] = []
 
     async def _connect(self) -> None:
         """Establish asyncpg connection and add listener."""
@@ -58,10 +55,9 @@ class DBEvents:
     def _dispatch(
         self, connection: asyncpg.Connection, pid: int, channel: str, payload: str
     ):
-        event = json2.loads(payload)
-        self._emit(event)
+        self._emit(payload)
 
-    def _emit(self, event: Event | None):
+    def _emit(self, event: str | None):
         for q in self._subscribers:
             try:
                 q.put_nowait(event)
@@ -100,16 +96,14 @@ class DBEvents:
         self._emit(None)
         await self._disconnect()
 
-    async def notify(self, payload: str | dict) -> None:
-        if isinstance(payload, dict):
-            payload = json2.dumps(payload)
+    async def notify(self, payload: str) -> None:
         sql = sqlalchemy.text(f"NOTIFY {self.channel}, :payload").bindparams(
             sqlalchemy.bindparam("payload", payload, literal_execute=True)
         )
         async with self.db.connection() as conn:
             await conn.execute(sql)
 
-    async def listen(self, maxsize: int = 1000) -> typing.AsyncIterator[Event]:
+    async def listen(self, maxsize: int = 1000) -> typing.AsyncIterator[str]:
         q = asyncio.Queue(maxsize=maxsize)
         self._subscribers.append(q)
         try:

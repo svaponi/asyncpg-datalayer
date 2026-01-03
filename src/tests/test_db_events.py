@@ -1,5 +1,4 @@
 import asyncio
-import datetime
 import uuid
 
 import pytest
@@ -30,13 +29,7 @@ async def test_subscribe_and_notify(events):
     task2 = asyncio.create_task(worker(results2))
     task3 = asyncio.create_task(worker(results3))
 
-    payload = {
-        "name": "transaction",
-        "user_id": 42,
-        "transaction_id": uuid.uuid4(),
-        "amount": 123.45,
-        "created_at": datetime.datetime.now(),
-    }
+    payload = uuid.uuid4().hex
     await events.notify(payload)
     await events.disconnect()
 

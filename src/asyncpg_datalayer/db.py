@@ -19,24 +19,21 @@ from asyncpg_datalayer.errors import (
     ConstraintViolationException,
 )
 
-_REQUIRED_PREFIX = "postgresql+asyncpg://"
-_AUTOCORRECT_PREFIX = "postgresql://"
+_SA_PREFIX = "postgresql+asyncpg://"
+_PG_PREFIX = "postgresql://"
+
+
+def sanitize_postgres_url(postgres_url: str):
+    if not postgres_url.startswith(_PG_PREFIX):
+        raise RuntimeError(f"postgres_url should start with {_PG_PREFIX}")
+    sa_url = _SA_PREFIX + postgres_url.removeprefix(_PG_PREFIX)
+    return postgres_url, sa_url
 
 
 def patch_sqlalchemy_logger():
     logger = logging.getLogger("sqlalchemy.engine.Engine")
     for h in logger.handlers:
         logger.removeHandler(h)
-
-
-def sanitize_postgres_url(postgres_url: str):
-    if postgres_url.startswith(_AUTOCORRECT_PREFIX):
-        postgres_url = _REQUIRED_PREFIX + postgres_url.removeprefix(_AUTOCORRECT_PREFIX)
-    if not postgres_url.startswith(_REQUIRED_PREFIX):
-        raise RuntimeError(
-            f"postgres_url should start with {_REQUIRED_PREFIX} ot {_AUTOCORRECT_PREFIX}"
-        )
-    return postgres_url
 
 
 def get_asyncpg_cause(err: Exception):
@@ -73,7 +70,7 @@ class DB:
 
         super().__init__()
         self.logger = logging.getLogger(__name__)
-        self.postgres_url = postgres_url
+        self.postgres_url, self.sa_url = sanitize_postgres_url(postgres_url)
         self.echo = echo
         self.echo_pool = echo_pool
         self.pool_size = pool_size
@@ -96,7 +93,7 @@ class DB:
         self.logger.info(f"create_async_engine kwargs: {engine_kwargs}")
 
         self.engine = create_async_engine(
-            sanitize_postgres_url(postgres_url),
+            self.sa_url,
             future=True,
             pool_pre_ping=True,  # prevents connection is closed error, see https://sqlalche.me/e/20/rvf5
             **engine_kwargs,

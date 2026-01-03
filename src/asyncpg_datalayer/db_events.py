@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import logging
 import random
 import typing
@@ -103,14 +104,20 @@ class DBEvents:
         async with self.db.connection() as conn:
             await conn.execute(sql)
 
-    async def listen(self, maxsize: int = 1000) -> typing.AsyncIterator[str]:
-        q = asyncio.Queue(maxsize=maxsize)
+    @contextlib.contextmanager
+    def subscribe(self) -> typing.Generator[asyncio.Queue[str | None], None, None]:
+        q = asyncio.Queue(maxsize=1000)
         self._subscribers.append(q)
+        yield q
         try:
+            self._subscribers.remove(q)
+        except ValueError:
+            pass
+
+    async def listen(self) -> typing.AsyncIterator[str]:
+        with self.subscribe() as q:
             while True:
                 event = await q.get()
                 if event is None:
                     break
                 yield event
-        finally:
-            self._subscribers.remove(q)

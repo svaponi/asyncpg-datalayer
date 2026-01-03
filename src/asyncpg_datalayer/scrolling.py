@@ -105,6 +105,7 @@ def with_scrolling(
 _VALUE = "v"
 _TYPE = "$t"
 
+
 class _CustomEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, uuid.UUID):
@@ -112,6 +113,7 @@ class _CustomEncoder(json.JSONEncoder):
         if isinstance(obj, datetime.datetime):
             return {_TYPE: "datetime", _VALUE: obj.timestamp()}
         return super().default(obj)
+
 
 def _custom_decode(obj):
     v = obj.get(_VALUE)
@@ -121,6 +123,7 @@ def _custom_decode(obj):
     if t == "datetime":
         return datetime.datetime.fromtimestamp(v)
     return obj
+
 
 def _encode_cursor(cursor_parts: dict) -> str:
     raw = json.dumps(cursor_parts, cls=_CustomEncoder).encode("utf-8")

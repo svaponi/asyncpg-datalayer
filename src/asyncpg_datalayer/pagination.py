@@ -26,4 +26,3 @@ def with_pagination(
     for order_by in order_bys:
         query = query.order_by(order_by)
     return query
-

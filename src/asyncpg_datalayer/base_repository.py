@@ -122,12 +122,11 @@ class BaseRepository(typing.Generic[Record]):
             count = count_response.scalar()
         return count
 
-
     async def scroll(
         self,
         size: int,
         cursor: str | None = None,
-        sort_by: str| None = None,
+        sort_by: str | None = None,
         filters: Filters | None = None,
         skip_count: bool = False,
         reuse_session: sqlalchemy.ext.asyncio.AsyncSession = None,
@@ -182,7 +181,6 @@ class BaseRepository(typing.Generic[Record]):
                 order_by_cols=order_by_cols,
             )
         return results, count, last_cursor
-
 
     async def get_page(
         self,

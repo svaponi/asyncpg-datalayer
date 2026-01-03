@@ -1,0 +1,122 @@
+import asyncio
+import logging
+import random
+import typing
+from typing import Any, Optional
+
+import asyncpg
+import sqlalchemy
+
+from asyncpg_datalayer import json2
+from asyncpg_datalayer.db import DB
+
+Event = dict[str, Any]
+
+
+class DBEvents:
+    def __init__(
+        self,
+        db: DB,
+        channel: Optional[str] = None,
+    ) -> None:
+        self.logger = logging.getLogger(__name__)
+        self.db = db
+        self.channel = channel or "events"
+
+        self._connection: Optional[asyncpg.Connection] = None
+        self._connection_lock = asyncio.Lock()
+
+        self._reconnect_task: Optional[asyncio.Task] = None
+        self._stop_event = asyncio.Event()
+
+        self._subscribers: list[asyncio.Queue[Event | None]] = []
+
+    async def _connect(self) -> None:
+        """Establish asyncpg connection and add listener."""
+        async with self._connection_lock:
+            if self._connection:
+                return
+            try:
+                self._connection = await asyncpg.connect(self.db.postgres_url)
+                await self._connection.add_listener(self.channel, self._dispatch)
+                self.logger.info("LISTEN connected on channel %s", self.channel)
+            except Exception:
+                self.logger.exception(
+                    "Failed to connect LISTEN on channel %s", self.channel
+                )
+                self._connection = None
+                raise
+
+    async def _disconnect(self) -> None:
+        """Close asyncpg connection."""
+        async with self._connection_lock:
+            if self._connection:
+                await self._connection.close()
+                self._connection = None
+                self.logger.info("LISTEN connection closed")
+
+    def _dispatch(
+        self, connection: asyncpg.Connection, pid: int, channel: str, payload: str
+    ):
+        event = json2.loads(payload)
+        self._emit(event)
+
+    def _emit(self, event: Event | None):
+        for q in self._subscribers:
+            try:
+                q.put_nowait(event)
+            except asyncio.QueueFull:
+                self.logger.warning("Subscriber queue full, dropping event")
+
+    async def _reconnect_loop(self):
+        """Background task that reconnects if connection drops."""
+        retry_delay = 1
+        max_delay = 30
+        while not self._stop_event.is_set():
+            if not self._connection or self._connection.is_closed():
+                try:
+                    self.logger.warning("LISTEN connection lost, reconnecting...")
+                    await self._connect()
+                    retry_delay = 1  # reset after success
+                except Exception:
+                    self.logger.error(
+                        "Reconnect failed, retrying in %.1fs...", retry_delay
+                    )
+                    await asyncio.sleep(retry_delay + random.random())  # jitter
+                    retry_delay = min(max_delay, retry_delay * 2)
+            else:
+                await asyncio.sleep(1)
+
+    async def connect(self) -> None:
+        self._stop_event.clear()
+        await self._connect()
+        if self._reconnect_task is None or self._reconnect_task.done():
+            self._reconnect_task = asyncio.create_task(self._reconnect_loop())
+
+    async def disconnect(self) -> None:
+        self._stop_event.set()
+        if self._reconnect_task:
+            await self._reconnect_task
+        self._emit(None)
+        await self._disconnect()
+
+    async def notify(self, payload: str | dict) -> None:
+        if isinstance(payload, dict):
+            payload = json2.dumps(payload)
+        sql = sqlalchemy.text(f"NOTIFY {self.channel}, :payload").bindparams(
+            sqlalchemy.bindparam("payload", payload, literal_execute=True)
+        )
+        async with self.db.connection() as conn:
+            await conn.execute(sql)
+
+    async def listen(self, maxsize: int = 1000) -> typing.AsyncIterator[Event]:
+        q = asyncio.Queue(maxsize=maxsize)
+        self._subscribers.append(q)
+        try:
+            while True:
+                event = await q.get()
+                if event is None:
+                    break
+                yield event
+        finally:
+            self._subscribers.remove(q)
